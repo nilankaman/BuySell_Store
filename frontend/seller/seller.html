@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>BuySell — Seller Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080808;--bg2:#0f0f0f;--bg3:#161616;--bg4:#1e1e1e;
+  --bg: #030712; --bg2: #0f172a; --bg3: #1e293b;
+  --bg: #161616; --bg2: #1e1e1e; --bg3: #282828;
+  --border:#222;--border2:#2e2e2e;
+  --gold:#f5c518;--gold2:#e0b015;--gold-dim:rgba(245,197,24,.1);
+  --text:#efefef;--text2:#aaa;--text3:#666;
+  --red:#e74c3c;--green:#27ae60;--orange:#f39c12;
+  --r:8px;--r2:12px;
+  --ease:cubic-bezier(.4,0,.2,1);
+}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+button{cursor:pointer;font-family:inherit;border:none;background:none}
+input,select,textarea{font-family:inherit;outline:none}
+a{text-decoration:none;color:inherit}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* NOISE OVERLAY */
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;opacity:.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")}
+
+/* TOAST */
+#toasts{position:fixed;bottom:20px;right:20px;z-index:99999;display:flex;flex-direction:column;gap:8px}
+.toast{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:var(--r);font-size:13px;font-weight:600;min-width:220px;max-width:320px;animation:tIn .3s var(--ease);box-shadow:0 12px 40px rgba(0,0,0,.7)}
+.toast.ok{background:#0a1f12;border:1px solid var(--green);color:var(--green)}
+.toast.err{background:#1a0808;border:1px solid var(--red);color:var(--red)}
+.toast.info{background:#141408;border:1px solid var(--gold);color:var(--gold)}
+@keyframes tIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;height:58px;background:rgba(8,8,8,.96);border-bottom:1px solid var(--border);backdrop-filter:blur(24px);display:flex;align-items:center;padding:0 24px;gap:16px}
+.logo{font-family:'Bebas Neue';font-size:24px;letter-spacing:3px;color:var(--gold);cursor:pointer;flex-shrink:0}
+.logo span{color:var(--text)}
+.nav-pill{padding:3px 10px;background:rgba(245,197,24,.08);border:1px solid rgba(245,197,24,.2);border-radius:20px;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--gold);text-transform:uppercase}
+.nav-links{display:flex;gap:2px;margin-left:8px}
+.nl{padding:6px 12px;border-radius:6px;font-size:13px;font-weight:500;color:var(--text3);cursor:pointer;transition:all .2s var(--ease);white-space:nowrap}
+.nl:hover,.nl.on{color:var(--text);background:var(--bg3)}
+.nl.on{color:var(--gold)}
+.nav-r{margin-left:auto;display:flex;align-items:center;gap:10px}
+.nav-shop{padding:0 14px;height:34px;border-radius:7px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);font-size:12px;font-weight:600;transition:all .2s}
+.nav-shop:hover{border-color:var(--gold);color:var(--gold)}
+.avatar{width:34px;height:34px;border-radius:var(--r);background:var(--gold);color:#000;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.umenu{position:relative}
+.udrop{position:absolute;top:calc(100%+8px);right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);min-width:200px;box-shadow:0 20px 60px rgba(0,0,0,.8);display:none;overflow:hidden}
+.udrop.open{display:block}
+.udrop-head{padding:13px 15px;border-bottom:1px solid var(--border)}
+.udrop-head strong{display:block;font-size:13px;font-weight:700}
+.udrop-head span{font-size:11px;color:var(--text3)}
+.ddi{padding:10px 15px;font-size:13px;cursor:pointer;transition:background .15s;display:flex;align-items:center;gap:10px}
+.ddi:hover{background:var(--bg3)}
+.ddi.red:hover{color:var(--red)}
+.ddiv{height:1px;background:var(--border)}
+.btn-login{padding:0 16px;height:34px;border-radius:7px;background:var(--gold);color:#000;font-weight:700;font-size:13px;transition:background .2s}
+.btn-login:hover{background:var(--gold2)}
+
+/* PAGES */
+.page{display:none;min-height:100vh;padding-top:58px}
+.page.on{display:block}
+
+/* BUTTONS */
+.btn{padding:11px 24px;border-radius:var(--r);font-weight:700;font-size:13px;transition:all .2s var(--ease);cursor:pointer}
+.btn-gold{background:var(--gold);color:#000}.btn-gold:hover{background:var(--gold2);transform:translateY(-1px)}
+.btn-outline{background:transparent;color:var(--text);border:1px solid var(--border2)}.btn-outline:hover{border-color:var(--text2)}
+.btn-sm{padding:7px 14px;font-size:12px;border-radius:6px}
+.btn-danger{background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.25);color:var(--red)}.btn-danger:hover{background:rgba(231,76,60,.2)}
+.btn-edit{background:var(--gold-dim);border:1px solid rgba(245,197,24,.2);color:var(--gold)}.btn-edit:hover{background:rgba(245,197,24,.18)}
+
+/* FORM ELEMENTS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:22px}
+.flabel{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:6px}
+.finput{width:100%;padding:10px 13px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);font-size:13px;transition:border-color .2s}
+.finput:focus{border-color:var(--gold)}
+.finput::placeholder{color:var(--text3)}
+select.finput{cursor:pointer}
+select.finput option{background:var(--bg2)}
+.fg{margin-bottom:14px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+
+/* HERO */
+.hero{padding:72px 6vw 56px;position:relative;overflow:hidden;border-bottom:1px solid var(--border)}
+.hero-lines{position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent,transparent 79px,var(--border) 80px),repeating-linear-gradient(transparent,transparent 79px,var(--border) 80px);opacity:.07}
+.hero-glow{position:absolute;right:-100px;top:-100px;width:500px;height:500px;background:radial-gradient(circle,rgba(245,197,24,.06),transparent 70%);pointer-events:none}
+.hero-content{position:relative;z-index:1;max-width:680px}
+.hero-tag{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:var(--gold-dim);border:1px solid rgba(245,197,24,.2);border-radius:20px;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:22px}
+.hero h1{font-family:'Bebas Neue';font-size:clamp(54px,9vw,100px);line-height:.88;letter-spacing:1px;margin-bottom:18px}
+.hero h1 em{color:var(--gold);font-style:normal}
+.hero p{font-size:15px;color:var(--text2);line-height:1.7;max-width:480px;margin-bottom:28px}
+.hero-btns{display:flex;gap:10px;flex-wrap:wrap}
+.hero-feats{display:flex;gap:24px;flex-wrap:wrap;margin-top:28px}
+.hfeat{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text3)}
+.hfeat::before{content:'✓';color:var(--green);font-weight:700;font-size:13px}
+
+/* AUTH */
+.auth-wrap{min-height:calc(100vh - 58px);display:flex;align-items:center;justify-content:center;padding:32px 16px}
+.auth-box{width:100%;max-width:420px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:32px}
+.auth-logo{font-family:'Bebas Neue';font-size:26px;letter-spacing:3px;color:var(--gold);text-align:center;margin-bottom:2px}
+.auth-sub{text-align:center;font-size:11px;color:var(--text3);margin-bottom:22px;letter-spacing:.5px}
+.atabs{display:flex;background:var(--bg3);border-radius:var(--r);padding:3px;margin-bottom:22px}
+.atab{flex:1;padding:8px;text-align:center;border-radius:6px;font-size:13px;font-weight:600;color:var(--text3);cursor:pointer;transition:all .2s}
+.atab.on{background:var(--bg2);color:var(--text);box-shadow:0 2px 10px rgba(0,0,0,.5)}
+.aform{display:none}.aform.on{display:block}
+
+/* DASHBOARD */
+.dash{padding:28px 5vw;max-width:1200px;margin:0 auto}
+.dash-top{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.dash-label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.dash-title{font-family:'Bebas Neue';font-size:clamp(26px,4vw,40px);letter-spacing:1px;line-height:1}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:18px 20px;transition:all .2s;position:relative;overflow:hidden}
+.stat::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--gold);opacity:0;transition:opacity .2s}
+.stat:hover{border-color:var(--border2);transform:translateY(-2px)}
+.stat:hover::after{opacity:1}
+.stat-lbl{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
+.stat-val{font-family:'JetBrains Mono';font-size:28px;font-weight:700;color:var(--gold);line-height:1}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:5px}
+
+/* TABS */
+.dtabs{display:flex;gap:6px;margin-bottom:22px;flex-wrap:wrap}
+.dtab{padding:8px 16px;border-radius:7px;font-size:12px;font-weight:700;background:var(--bg2);border:1px solid var(--border);color:var(--text3);cursor:pointer;transition:all .2s;letter-spacing:.3px}
+.dtab:hover{border-color:var(--border2);color:var(--text2)}
+.dtab.on{background:var(--gold);border-color:var(--gold);color:#000}
+.dpanel{display:none}.dpanel.on{display:block}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;border-radius:var(--r2);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:10px 14px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);font-weight:700;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg2)}
+td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg3)}
+.timg{width:40px;height:40px;border-radius:6px;object-fit:cover;background:var(--bg3);display:block}
+.badge{padding:3px 8px;border-radius:20px;font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap}
+.b-active{background:rgba(39,174,96,.1);color:var(--green)}
+.b-sold{background:rgba(245,197,24,.1);color:var(--gold)}
+.b-pending{background:rgba(243,156,18,.1);color:var(--orange)}
+.b-shipped{background:rgba(52,152,219,.1);color:#3498db}
+.b-cancelled{background:rgba(231,76,60,.1);color:var(--red)}
+.acts{display:flex;gap:6px}
+
+/* ORDER CARDS */
+.ocard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:10px;overflow:hidden;transition:border-color .2s}
+.ocard:hover{border-color:var(--border2)}
+.ohead{padding:14px 18px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:background .15s;flex-wrap:wrap}
+.ohead:hover{background:var(--bg3)}
+.onum{font-family:'JetBrains Mono';font-weight:700;font-size:12px;color:var(--gold)}
+.odate{font-size:11px;color:var(--text3)}
+.obuyer{font-size:13px;font-weight:600}
+.ototal{font-family:'JetBrains Mono';font-weight:700;font-size:14px;margin-left:auto}
+.obody{display:none;padding:16px 18px;border-top:1px solid var(--border)}
+.obody.open{display:block}
+.oitem{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.oitem:last-of-type{border-bottom:none}
+.oitem img{width:42px;height:42px;border-radius:6px;object-fit:cover;background:var(--bg3)}
+
+/* AI BOX */
+.ai-box{background:linear-gradient(135deg,rgba(245,197,24,.04),transparent);border:1px solid rgba(245,197,24,.15);border-radius:var(--r2);padding:20px;margin-bottom:20px;position:relative;overflow:hidden}
+.ai-box::before{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:radial-gradient(circle,rgba(245,197,24,.06),transparent 70%);pointer-events:none}
+.ai-title{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:4px;display:flex;align-items:center;gap:7px}
+.ai-sub{font-size:12px;color:var(--text3);margin-bottom:14px}
+.ai-row{display:flex;gap:10px}
+.ai-row textarea{flex:1;padding:10px 13px;background:var(--bg3);border:1px solid rgba(245,197,24,.15);border-radius:var(--r);color:var(--text);font-size:13px;resize:none;transition:border-color .2s;line-height:1.5}
+.ai-row textarea:focus{border-color:var(--gold)}
+.ai-row textarea::placeholder{color:var(--text3)}
+.ai-btn{padding:0 18px;background:var(--gold);color:#000;font-weight:700;font-size:13px;border-radius:var(--r);white-space:nowrap;transition:all .2s;min-width:100px}
+.ai-btn:hover{background:var(--gold2)}
+.ai-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.ai-out{margin-top:12px;padding:13px;background:var(--bg3);border-radius:var(--r);font-size:13px;line-height:1.65;display:none;border:1px solid rgba(245,197,24,.12);color:var(--text2)}
+.ai-out.show{display:block}
+.ai-use{margin-top:10px;padding:6px 13px;background:var(--gold-dim);border:1px solid rgba(245,197,24,.2);border-radius:6px;color:var(--gold);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
+.ai-use:hover{background:rgba(245,197,24,.15)}
+
+/* EMPTY */
+.empty{text-align:center;padding:52px 20px}
+.empty-ico{font-size:40px;margin-bottom:12px}
+.empty h3{font-size:16px;font-weight:700;margin-bottom:6px}
+.empty p{font-size:12px;color:var(--text3);margin-bottom:16px}
+
+/* SPINNER */
+.loading{display:flex;justify-content:center;padding:40px}
+.spin{width:24px;height:24px;border:2px solid var(--border2);border-top-color:var(--gold);border-radius:50%;animation:sp .6s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .2s}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);width:100%;max-width:540px;max-height:90vh;overflow-y:auto;padding:26px}
+.modal-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.modal-top h3{font-size:16px;font-weight:700}
+.mclose{width:28px;height:28px;border-radius:6px;background:var(--bg3);color:var(--text3);font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s}
+.mclose:hover{color:var(--red);background:rgba(231,76,60,.1)}
+
+/* OVERVIEW CARDS */
+.ov-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.ov-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.ov-row:last-child{border-bottom:none}
+
+/* LIST FORM */
+.lform-wrap{max-width:700px}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .stats{grid-template-columns:1fr 1fr}
+  .g2,.g3{grid-template-columns:1fr}
+  .ov-grid{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .stats{grid-template-columns:1fr 1fr}
+  nav{padding:0 14px;gap:10px}
+  .dash{padding:20px 4vw}
+}
+</style>
+</head>
+<body>
+
+<div id="toasts"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="logo" onclick="goLanding()">BUY<span>SELL</span></div>
+  <div class="nav-pill">Seller Hub</div>
+  <div class="nav-links" id="nav-links" style="display:none">
+    <div class="nl on" onclick="dtab('overview')">Overview</div>
+    <div class="nl" onclick="dtab('listings')">Listings</div>
+    <div class="nl" onclick="dtab('orders')">Orders</div>
+    <div class="nl" onclick="dtab('list')">+ New</div>
+  </div>
+  <div class="nav-r">
+    <button class="nav-shop" onclick="window.location.href='/index.html'">🛒 Shop</button>
+    <div id="nav-auth"></div>
+  </div>
+</nav>
+
+<!-- LANDING -->
+<div class="page on" id="page-landing">
+  <div class="hero">
+    <div class="hero-lines"></div>
+    <div class="hero-glow"></div>
+    <div class="hero-content">
+      <div class="hero-tag">✦ Seller Hub</div>
+      <h1>TURN YOUR<br><em>ITEMS</em> INTO<br>INCOME.</h1>
+      <p>List products in minutes. AI writes your descriptions. Buyers find you instantly. Start selling today — no setup fees.</p>
+      <div class="hero-btns">
+        <button class="btn btn-gold" style="font-size:14px;padding:13px 28px" onclick="goPage('auth')">Start Selling →</button>
+        <button class="btn btn-outline" style="font-size:14px;padding:13px 28px" onclick="goPage('auth')">Sign In</button>
+      </div>
+      <div class="hero-feats">
+        <span class="hfeat">AI listing writer</span>
+        <span class="hfeat">Real-time orders</span>
+        <span class="hfeat">Zero fees to start</span>
+        <span class="hfeat">Instant publish</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <div style="padding:60px 6vw;border-bottom:1px solid var(--border)">
+    <div style="font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--text3);margin-bottom:32px;text-align:center">How It Works</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:800px;margin:0 auto">
+      <div style="text-align:center">
+        <div style="font-size:36px;margin-bottom:12px">📝</div>
+        <div style="font-weight:700;margin-bottom:6px;font-size:14px">Describe It</div>
+        <div style="font-size:12px;color:var(--text3);line-height:1.6">Type a rough description of what you're selling. Condition, size, brand — whatever you know.</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:36px;margin-bottom:12px">🤖</div>
+        <div style="font-weight:700;margin-bottom:6px;font-size:14px">AI Polishes It</div>
+        <div style="font-size:12px;color:var(--text3);line-height:1.6">Our AI rewrites it into a clean, professional listing that attracts buyers and sells faster.</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:36px;margin-bottom:12px">💰</div>
+        <div style="font-weight:700;margin-bottom:6px;font-size:14px">Get Paid</div>
+        <div style="font-size:12px;color:var(--text3);line-height:1.6">Buyers order through BuySell. You ship, mark as done, and get your payout.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AUTH -->
+<div class="page" id="page-auth">
+  <div class="auth-wrap">
+    <div class="auth-box">
+      <div class="auth-logo">BUY<span style="color:var(--text)">SELL</span></div>
+      <div class="auth-sub">SELLER HUB — SIGN IN OR CREATE ACCOUNT</div>
+      <div class="atabs">
+        <div class="atab on" onclick="atab('login')">Login</div>
+        <div class="atab" onclick="atab('register')">Register</div>
+      </div>
+
+      <div class="aform on" id="aform-login">
+        <div class="fg"><label class="flabel">Email</label><input class="finput" type="email" id="l-email" placeholder="you@email.com"/></div>
+        <div class="fg"><label class="flabel">Password</label><input class="finput" type="password" id="l-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+        <button class="btn btn-gold" style="width:100%;padding:12px;font-size:14px;margin-top:4px" onclick="doLogin()">Login →</button>
+        <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--text3)">Demo: admin@buysell.com / admin123</div>
+      </div>
+
+      <div class="aform" id="aform-register">
+        <div class="g2">
+          <div class="fg"><label class="flabel">First Name</label><input class="finput" id="r-fn" placeholder="First"/></div>
+          <div class="fg"><label class="flabel">Last Name</label><input class="finput" id="r-ln" placeholder="Last"/></div>
+        </div>
+        <div class="fg"><label class="flabel">Email</label><input class="finput" type="email" id="r-em" placeholder="you@email.com"/></div>
+        <div class="fg"><label class="flabel">Password</label><input class="finput" type="password" id="r-pw" placeholder="Min 6 characters"/></div>
+        <div class="fg"><label class="flabel">Phone (optional)</label><input class="finput" id="r-ph" placeholder="+81 90-0000-0000"/></div>
+        <button class="btn btn-gold" style="width:100%;padding:12px;font-size:14px;margin-top:4px" onclick="doRegister()">Create Account →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="page" id="page-dashboard">
+  <div class="dash">
+
+    <div class="dash-top">
+      <div>
+        <div class="dash-label">Seller Dashboard</div>
+        <div class="dash-title" id="greeting">GOOD MORNING</div>
+      </div>
+      <button class="btn btn-gold btn-sm" onclick="dtab('list')">+ New Listing</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="stat-lbl">Listings</div><div class="stat-val" id="s-listings">—</div><div class="stat-sub">Active products</div></div>
+      <div class="stat"><div class="stat-lbl">Orders</div><div class="stat-val" id="s-orders">—</div><div class="stat-sub">All time</div></div>
+      <div class="stat"><div class="stat-lbl">Earnings</div><div class="stat-val" id="s-earn">—</div><div class="stat-sub">Total revenue</div></div>
+      <div class="stat"><div class="stat-lbl">Pending</div><div class="stat-val" id="s-pend">—</div><div class="stat-sub">Needs action</div></div>
+    </div>
+
+    <div class="dtabs">
+      <button class="dtab on" onclick="dtab('overview')">Overview</button>
+      <button class="dtab" onclick="dtab('listings')">My Listings</button>
+      <button class="dtab" onclick="dtab('orders')">Orders</button>
+      <button class="dtab" onclick="dtab('list')">+ New Listing</button>
+    </div>
+
+    <!-- OVERVIEW -->
+    <div class="dpanel on" id="panel-overview">
+      <div class="ov-grid">
+        <div class="card">
+          <div style="font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px">📦 Recent Orders</div>
+          <div id="ov-orders"><div class="loading"><div class="spin"></div></div></div>
+        </div>
+        <div class="card">
+          <div style="font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px">🏷️ Recent Listings</div>
+          <div id="ov-listings"><div class="loading"><div class="spin"></div></div></div>
+        </div>
+      </div>
+      <div class="card" style="background:linear-gradient(135deg,rgba(245,197,24,.04),transparent);border-color:rgba(245,197,24,.15)">
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div style="font-size:32px">🤖</div>
+          <div>
+            <div style="font-weight:700;font-size:14px;margin-bottom:4px">AI Listing Assistant</div>
+            <div style="font-size:12px;color:var(--text3)">Describe your item in rough words — AI rewrites it into a professional listing instantly.</div>
+          </div>
+          <button class="btn btn-gold btn-sm" style="margin-left:auto;white-space:nowrap" onclick="dtab('list')">Try it →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LISTINGS -->
+    <div class="dpanel" id="panel-listings">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="listings-tbody"><tr><td colspan="7"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ORDERS -->
+    <div class="dpanel" id="panel-orders">
+      <div id="orders-list"><div class="loading"><div class="spin"></div></div></div>
+    </div>
+
+    <!-- NEW LISTING -->
+    <div class="dpanel" id="panel-list">
+      <div class="lform-wrap">
+
+        <div class="ai-box">
+          <div class="ai-title">🤖 AI Listing Assistant</div>
+          <div class="ai-sub">Describe your product in plain words. AI will write a proper title and description.</div>
+          <div class="ai-row">
+            <textarea id="ai-rough" rows="2" placeholder="e.g. used nike shoes size 27, worn 3 months, still good, black color, no box"></textarea>
+            <button class="ai-btn" id="ai-btn" onclick="genListing()">✦ Generate</button>
+          </div>
+          <div class="ai-out" id="ai-out">
+            <div id="ai-out-text"></div>
+            <button class="ai-use" onclick="useAI()">↓ Use this in form</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="font-size:14px;font-weight:700;margin-bottom:18px">Product Details</div>
+          <div class="fg"><label class="flabel">Product Name *</label><input class="finput" id="f-name" placeholder="e.g. Nike Air Max 270 Black"/></div>
+          <div class="g2">
+            <div class="fg">
+              <label class="flabel">Category *</label>
+              <select class="finput" id="f-cat">
+                <option value="">Select category</option>
+                <option value="sneakers">👟 Sneakers</option>
+                <option value="clothing">👕 Clothing</option>
+                <option value="electronics">🎧 Electronics</option>
+                <option value="accessories">👜 Accessories</option>
+                <option value="sports">⚽ Sports</option>
+                <option value="books">📚 Books</option>
+                <option value="other">📦 Other</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label class="flabel">Condition</label>
+              <select class="finput" id="f-cond">
+                <option value="new">Brand New</option>
+                <option value="like-new">Like New</option>
+                <option value="good">Good</option>
+                <option value="fair">Fair</option>
+              </select>
+            </div>
+          </div>
+          <div class="fg"><label class="flabel">Description</label><textarea class="finput" id="f-desc" rows="4" style="resize:vertical" placeholder="Condition, features, why selling, what's included..."></textarea></div>
+          <div class="g3">
+            <div class="fg"><label class="flabel">Price ¥ *</label><input class="finput" type="number" id="f-price" placeholder="0"/></div>
+            <div class="fg"><label class="flabel">Original Price ¥</label><input class="finput" type="number" id="f-oldprice" placeholder="0"/></div>
+            <div class="fg"><label class="flabel">Stock Qty</label><input class="finput" type="number" id="f-stock" value="1"/></div>
+          </div>
+          <div class="g2">
+            <div class="fg"><label class="flabel">Colors</label><input class="finput" id="f-colors" placeholder="Black, White, Red"/></div>
+            <div class="fg"><label class="flabel">Sizes</label><input class="finput" id="f-sizes" placeholder="S, M, L or 25, 26, 27"/></div>
+          </div>
+          <div class="fg"><label class="flabel">Image URL</label><input class="finput" id="f-img" placeholder="https://..."/></div>
+          <div class="fg">
+            <label class="flabel">Badge</label>
+            <select class="finput" id="f-badge">
+              <option value="">None</option>
+              <option value="new">New</option>
+              <option value="sale">Sale</option>
+              <option value="bestseller">Bestseller</option>
+            </select>
+          </div>
+          <input type="hidden" id="f-id"/>
+          <div style="display:flex;gap:10px;margin-top:6px">
+            <button class="btn btn-gold" style="flex:2;padding:13px" onclick="submitListing()">Publish Listing 🚀</button>
+            <button class="btn btn-outline" style="flex:1;padding:13px" onclick="clearForm()">Clear</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="overlay" id="edit-overlay">
+  <div class="modal">
+    <div class="modal-top"><h3>Edit Listing</h3><button class="mclose" onclick="closeModal()">✕</button></div>
+    <div class="fg"><label class="flabel">Name *</label><input class="finput" id="e-name"/></div>
+    <div class="g2">
+      <div class="fg"><label class="flabel">Category *</label><input class="finput" id="e-cat"/></div>
+      <div class="fg"><label class="flabel">Badge</label><input class="finput" id="e-badge" placeholder="sale/new/bestseller"/></div>
+    </div>
+    <div class="g2">
+      <div class="fg"><label class="flabel">Price ¥ *</label><input class="finput" type="number" id="e-price"/></div>
+      <div class="fg"><label class="flabel">Old Price ¥</label><input class="finput" type="number" id="e-oldprice"/></div>
+    </div>
+    <div class="g2">
+      <div class="fg"><label class="flabel">Stock</label><input class="finput" type="number" id="e-stock"/></div>
+      <div class="fg"><label class="flabel">Rating</label><input class="finput" type="number" id="e-rating" step="0.1" max="5"/></div>
+    </div>
+    <div class="fg"><label class="flabel">Image URL</label><input class="finput" id="e-img"/></div>
+    <div class="g2">
+      <div class="fg"><label class="flabel">Colors</label><input class="finput" id="e-colors"/></div>
+      <div class="fg"><label class="flabel">Sizes</label><input class="finput" id="e-sizes"/></div>
+    </div>
+    <div class="fg"><label class="flabel">Description</label><textarea class="finput" id="e-desc" rows="3" style="resize:vertical"></textarea></div>
+    <input type="hidden" id="e-id"/>
+    <button class="btn btn-gold" style="width:100%;padding:13px;margin-top:6px" onclick="saveEdit()">Save Changes</button>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:8081/api';
+const S = { user:null, token:null, products:[], orders:[] };
+
+/* TOAST */
+function toast(msg, type='info') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${msg}</span>`;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+/* API */
+async function req(path, opts={}) {
+  const headers = { 'Content-Type':'application/json', ...opts.headers };
+  if (S.token) headers.Authorization = `Bearer ${S.token}`;
+  const res = await fetch(API + path, { ...opts, headers });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || `Error ${res.status}`);
+  return data;
+}
+
+/* ROUTER */
+function goPage(p) {
+  document.querySelectorAll('.page').forEach(x => x.classList.remove('on'));
+  document.getElementById('page-' + p)?.classList.add('on');
+  window.scrollTo(0,0);
+}
+function goLanding() {
+  if (S.user) { dtab('overview'); } else { goPage('landing'); }
+}
+
+/* INIT */
+function init() {
+  const token = localStorage.getItem('bs_token');
+  const user = localStorage.getItem('bs_user');
+  if (token && user) {
+    S.token = token; S.user = JSON.parse(user);
+    renderNav(); goPage('dashboard'); loadDash();
+  } else {
+    goPage('landing');
+  }
+}
+
+/* NAV */
+function renderNav() {
+  const el = document.getElementById('nav-auth');
+  const links = document.getElementById('nav-links');
+  if (S.user) {
+    const ini = (S.user.firstName||'?')[0] + (S.user.lastName||'?')[0];
+    el.innerHTML = `
+      <div class="umenu">
+        <div class="avatar" onclick="toggleMenu()">${ini.toUpperCase()}</div>
+        <div class="udrop" id="udrop">
+          <div class="udrop-head"><strong>${S.user.firstName} ${S.user.lastName}</strong><span>${S.user.email}</span></div>
+          <div class="ddi" onclick="dtab('list');closeMenu()">➕ New Listing</div>
+          <div class="ddi" onclick="dtab('orders');closeMenu()">📦 Orders</div>
+          <div class="ddiv"></div>
+          <div class="ddi red" onclick="logout()">🚪 Logout</div>
+        </div>
+      </div>`;
+    links.style.display = 'flex';
+  } else {
+    el.innerHTML = `<button class="btn-login" onclick="goPage('auth')">Seller Login</button>`;
+    links.style.display = 'none';
+  }
+}
+function toggleMenu() { document.getElementById('udrop')?.classList.toggle('open'); }
+function closeMenu() { document.getElementById('udrop')?.classList.remove('open'); }
+document.addEventListener('click', e => { if (!e.target.closest('.umenu')) closeMenu(); });
+
+/* AUTH TABS */
+function atab(t) {
+  document.querySelectorAll('.atab').forEach((el,i) => el.classList.toggle('on', i===(t==='login'?0:1)));
+  document.getElementById('aform-login').classList.toggle('on', t==='login');
+  document.getElementById('aform-register').classList.toggle('on', t==='register');
+}
+
+async function doLogin() {
+  const email = document.getElementById('l-email').value.trim();
+  const pass = document.getElementById('l-pass').value;
+  if (!email || !pass) return toast('Fill in all fields', 'err');
+  try {
+    const res = await req('/auth/login', { method:'POST', body:JSON.stringify({ email, password:pass }) });
+    saveAuth(res.data);
+    toast(`Welcome back, ${res.data.firstName}!`, 'ok');
+    goPage('dashboard'); loadDash();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function doRegister() {
+  const firstName = document.getElementById('r-fn').value.trim();
+  const lastName  = document.getElementById('r-ln').value.trim();
+  const email     = document.getElementById('r-em').value.trim();
+  const password  = document.getElementById('r-pw').value;
+  const phone     = document.getElementById('r-ph').value.trim();
+  if (!firstName || !lastName || !email || !password) return toast('Fill in required fields', 'err');
+  try {
+    const res = await req('/auth/register', { method:'POST', body:JSON.stringify({ firstName, lastName, email, password, phone }) });
+    saveAuth(res.data);
+    toast(`Welcome, ${res.data.firstName}! Start selling 🚀`, 'ok');
+    goPage('dashboard'); loadDash();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+function saveAuth(data) {
+  S.token = data.token; S.user = data;
+  localStorage.setItem('bs_token', data.token);
+  localStorage.setItem('bs_user', JSON.stringify(data));
+  renderNav();
+}
+
+function logout() {
+  S.token = null; S.user = null;
+  localStorage.removeItem('bs_token');
+  localStorage.removeItem('bs_user');
+  renderNav(); goPage('landing');
+  toast('Logged out', 'info');
+}
+
+/* DASH TABS */
+function dtab(t) {
+  const tabs = ['overview','listings','orders','list'];
+  document.querySelectorAll('.dtab').forEach((el,i) => el.classList.toggle('on', tabs[i]===t));
+  document.querySelectorAll('.dpanel').forEach(p => p.classList.remove('on'));
+  document.getElementById('panel-'+t)?.classList.add('on');
+  document.querySelectorAll('.nl').forEach((el,i) => el.classList.toggle('on', tabs[i]===t));
+  if (t==='listings') loadListings();
+  if (t==='orders') loadOrders();
+  if (t==='overview') loadOverview();
+}
+
+/* DASHBOARD */
+async function loadDash() {
+  const h = new Date().getHours();
+  const g = h<12?'GOOD MORNING':h<17?'GOOD AFTERNOON':'GOOD EVENING';
+  document.getElementById('greeting').textContent = g + (S.user ? `, ${S.user.firstName.toUpperCase()}` : '');
+  try {
+    const [pr, or] = await Promise.all([
+      req('/products'),
+      req('/orders').catch(() => ({ data:[] }))
+    ]);
+    S.products = pr.data || [];
+    S.orders   = or.data || [];
+    const earn = S.orders.reduce((s,o) => s+(o.totalAmount||0), 0);
+    const pend = S.orders.filter(o => ['PENDING','CONFIRMED','PROCESSING'].includes(o.status)).length;
+    document.getElementById('s-listings').textContent = S.products.length;
+    document.getElementById('s-orders').textContent   = S.orders.length;
+    document.getElementById('s-earn').textContent     = '¥' + earn.toLocaleString();
+    document.getElementById('s-pend').textContent     = pend;
+    loadOverview();
+  } catch(e) {
+    ['s-listings','s-orders','s-earn','s-pend'].forEach(id => document.getElementById(id).textContent = '0');
+  }
+}
+
+function loadOverview() {
+  const oe = document.getElementById('ov-orders');
+  if (!S.orders.length) {
+    oe.innerHTML = `<div class="empty" style="padding:20px"><div class="empty-ico">📦</div><p>No orders yet</p></div>`;
+  } else {
+    oe.innerHTML = S.orders.slice(0,5).map(o => `
+      <div class="ov-row">
+        <div style="flex:1">
+          <div style="font-family:'JetBrains Mono';font-size:11px;color:var(--gold)">${o.orderNumber||''}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">${o.createdAt ? new Date(o.createdAt).toLocaleDateString('ja-JP') : ''}</div>
+        </div>
+        <span class="badge b-${(o.status||'').toLowerCase()}">${o.status||''}</span>
+        <div style="font-family:'JetBrains Mono';font-size:12px;font-weight:700;margin-left:10px">¥${(o.totalAmount||0).toLocaleString()}</div>
+      </div>`).join('');
+  }
+
+  const le = document.getElementById('ov-listings');
+  if (!S.products.length) {
+    le.innerHTML = `<div class="empty" style="padding:20px"><div class="empty-ico">🏷️</div><p>No listings yet</p><button class="btn btn-gold btn-sm" onclick="dtab('list')">Add First</button></div>`;
+  } else {
+    le.innerHTML = S.products.slice(0,5).map(p => `
+      <div class="ov-row">
+        <img src="${p.imageUrl||''}" style="width:34px;height:34px;border-radius:5px;object-fit:cover;background:var(--bg3);flex-shrink:0" onerror="this.style.opacity=0"/>
+        <div style="flex:1;min-width:0;margin:0 10px">
+          <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name||''}</div>
+          <div style="font-size:10px;color:var(--text3)">${p.category||''}</div>
+        </div>
+        <div style="font-family:'JetBrains Mono';font-size:12px;font-weight:700;color:var(--gold)">¥${(p.price||0).toLocaleString()}</div>
+      </div>`).join('');
+  }
+}
+
+/* LISTINGS */
+async function loadListings() {
+  const tb = document.getElementById('listings-tbody');
+  try {
+    const res = await req('/products');
+    S.products = res.data || [];
+    if (!S.products.length) {
+      tb.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="empty-ico">🏷️</div><h3>No listings yet</h3><p>Add your first product to start selling.</p><button class="btn btn-gold btn-sm" onclick="dtab('list')">+ Add Listing</button></div></td></tr>`;
+      return;
+    }
+    tb.innerHTML = S.products.map(p => `
+      <tr>
+        <td><img class="timg" src="${p.imageUrl||''}" onerror="this.style.opacity=0"/></td>
+        <td style="font-weight:600;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name||''}</td>
+        <td style="color:var(--text3)">${p.category||''}</td>
+        <td style="font-family:'JetBrains Mono'">¥${(p.price||0).toLocaleString()}</td>
+        <td>${p.stock||0}</td>
+        <td><span class="badge ${(p.stock||0)>0?'b-active':'b-sold'}">${(p.stock||0)>0?'Active':'Sold Out'}</span></td>
+        <td><div class="acts">
+          <button class="btn btn-edit btn-sm" onclick="openEdit(${p.id})">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteListing(${p.id})">Delete</button>
+        </div></td>
+      </tr>`).join('');
+  } catch(e) { tb.innerHTML = `<tr><td colspan="7" style="color:var(--red);padding:16px">${e.message}</td></tr>`; }
+}
+
+/* ORDERS */
+async function loadOrders() {
+  const el = document.getElementById('orders-list');
+  try {
+    const res = await req('/orders');
+    S.orders = res.data || [];
+    if (!S.orders.length) {
+      el.innerHTML = `<div class="empty"><div class="empty-ico">📦</div><h3>No orders yet</h3><p>When buyers order, they'll show up here.</p></div>`;
+      return;
+    }
+    el.innerHTML = S.orders.map(o => `
+      <div class="ocard">
+        <div class="ohead" onclick="this.nextElementSibling.classList.toggle('open')">
+          <div><div class="onum">${o.orderNumber||''}</div><div class="odate">${o.createdAt?new Date(o.createdAt).toLocaleDateString('ja-JP'):''}</div></div>
+          <div class="obuyer">${o.user?.firstName||''} ${o.user?.lastName||''}</div>
+          <span class="badge b-${(o.status||'').toLowerCase()}" style="margin-left:auto">${o.status||''}</span>
+          <div class="ototal">¥${(o.totalAmount||0).toLocaleString()}</div>
+          <span style="color:var(--text3);font-size:18px">›</span>
+        </div>
+        <div class="obody">
+          ${(o.items||[]).map(item => `
+            <div class="oitem">
+              <img src="${item.productImageUrl||''}" onerror="this.style.opacity=0"/>
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:13px">${item.productName||''}</div>
+                <div style="font-size:11px;color:var(--text3)">Qty: ${item.quantity||1} · ¥${(item.unitPrice||0).toLocaleString()}</div>
+              </div>
+              <div style="font-family:'JetBrains Mono';font-weight:700;font-size:13px">¥${((item.unitPrice||0)*(item.quantity||1)).toLocaleString()}</div>
+            </div>`).join('')}
+          <div style="margin-top:10px;font-size:11px;color:var(--text3)">Ship to: ${o.shippingAddress||'—'}, ${o.shippingCity||''}</div>
+          ${o.status==='CONFIRMED'?`<button class="btn btn-gold btn-sm" style="margin-top:12px" onclick="markShipped(${o.id})">Mark as Shipped 🚚</button>`:''}
+        </div>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = `<div style="color:var(--red);padding:16px">${e.message}</div>`; }
+}
+
+async function markShipped(id) {
+  try {
+    await req(`/orders/${id}/status`, { method:'PUT', body:JSON.stringify({ status:'SHIPPED' }) });
+    toast('Marked as shipped!', 'ok');
+    loadOrders();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+/* AI */
+async function genListing() {
+  const rough = document.getElementById('ai-rough').value.trim();
+  if (!rough) return toast('Describe your product first', 'err');
+  const btn = document.getElementById('ai-btn');
+  const out  = document.getElementById('ai-out');
+  const outT = document.getElementById('ai-out-text');
+  btn.disabled = true; btn.textContent = '⏳...';
+  out.classList.remove('show');
+  try {
+    const res = await fetch('http://localhost:8081/api/help/chat', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', ...(S.token?{'Authorization':`Bearer ${S.token}`}:{}) },
+      body:JSON.stringify({ message:`Write a professional product listing for this item: "${rough}". Format exactly as:\nTITLE: [product title]\nDESCRIPTION: [2-3 sentence description]` })
+    });
+    const data = await res.json();
+    outT.textContent = data.data || data.message || 'Try again.';
+    out.classList.add('show');
+  } catch(e) {
+    outT.textContent = 'AI unavailable. Fill in the form manually.';
+    out.classList.add('show');
+  }
+  btn.disabled = false; btn.textContent = '✦ Generate';
+}
+
+function useAI() {
+  const text = document.getElementById('ai-out-text').textContent;
+  const tm = text.match(/TITLE:\s*(.+)/i);
+  const dm = text.match(/DESCRIPTION:\s*([\s\S]+)/i);
+  if (tm) document.getElementById('f-name').value = tm[1].trim();
+  if (dm) document.getElementById('f-desc').value = dm[1].trim();
+  if (!tm && !dm) document.getElementById('f-desc').value = text;
+  toast('Applied to form!', 'ok');
+}
+
+/* LISTING FORM */
+async function submitListing() {
+  const id = document.getElementById('f-id').value;
+  const body = {
+    name:     document.getElementById('f-name').value.trim(),
+    category: document.getElementById('f-cat').value,
+    description: document.getElementById('f-desc').value.trim() || null,
+    price:    parseFloat(document.getElementById('f-price').value),
+    oldPrice: parseFloat(document.getElementById('f-oldprice').value) || null,
+    stock:    parseInt(document.getElementById('f-stock').value) || 1,
+    imageUrl: document.getElementById('f-img').value.trim() || null,
+    colors:   document.getElementById('f-colors').value.trim() || null,
+    sizes:    document.getElementById('f-sizes').value.trim() || null,
+    badge:    document.getElementById('f-badge').value || null,
+  };
+  if (!body.name) return toast('Product name is required', 'err');
+  if (!body.category) return toast('Select a category', 'err');
+  if (!body.price || body.price <= 0) return toast('Enter a valid price', 'err');
+  try {
+    if (id) {
+      await req(`/products/${id}`, { method:'PUT', body:JSON.stringify(body) });
+      toast('Listing updated!', 'ok');
+    } else {
+      await req('/products', { method:'POST', body:JSON.stringify(body) });
+      toast('Listing published! 🚀', 'ok');
+    }
+    clearForm(); dtab('listings');
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+function clearForm() {
+  ['f-name','f-desc','f-price','f-oldprice','f-img','f-colors','f-sizes','f-id','ai-rough'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('f-stock').value = '1';
+  document.getElementById('f-cat').value = '';
+  document.getElementById('f-badge').value = '';
+  document.getElementById('f-cond').value = 'new';
+  document.getElementById('ai-out').classList.remove('show');
+}
+
+/* EDIT MODAL */
+async function openEdit(id) {
+  try {
+    const res = await req(`/products/${id}`);
+    const p = res.data;
+    document.getElementById('e-id').value      = p.id;
+    document.getElementById('e-name').value    = p.name||'';
+    document.getElementById('e-cat').value     = p.category||'';
+    document.getElementById('e-badge').value   = p.badge||'';
+    document.getElementById('e-price').value   = p.price||'';
+    document.getElementById('e-oldprice').value= p.oldPrice||'';
+    document.getElementById('e-stock').value   = p.stock||1;
+    document.getElementById('e-rating').value  = p.rating||0;
+    document.getElementById('e-img').value     = p.imageUrl||'';
+    document.getElementById('e-colors').value  = p.colors||'';
+    document.getElementById('e-sizes').value   = p.sizes||'';
+    document.getElementById('e-desc').value    = p.description||'';
+    document.getElementById('edit-overlay').classList.add('open');
+  } catch(e) { toast(e.message, 'err'); }
+}
+function closeModal() { document.getElementById('edit-overlay').classList.remove('open'); }
+
+async function saveEdit() {
+  const id = document.getElementById('e-id').value;
+  const body = {
+    name:     document.getElementById('e-name').value.trim(),
+    category: document.getElementById('e-cat').value.trim(),
+    badge:    document.getElementById('e-badge').value.trim()||null,
+    price:    parseFloat(document.getElementById('e-price').value),
+    oldPrice: parseFloat(document.getElementById('e-oldprice').value)||null,
+    stock:    parseInt(document.getElementById('e-stock').value)||1,
+    rating:   parseFloat(document.getElementById('e-rating').value)||0,
+    imageUrl: document.getElementById('e-img').value.trim()||null,
+    colors:   document.getElementById('e-colors').value.trim()||null,
+    sizes:    document.getElementById('e-sizes').value.trim()||null,
+    description: document.getElementById('e-desc').value.trim()||null,
+  };
+  if (!body.name||!body.category||!body.price) return toast('Name, category and price required', 'err');
+  try {
+    await req(`/products/${id}`, { method:'PUT', body:JSON.stringify(body) });
+    closeModal(); toast('Updated!', 'ok'); loadListings();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function deleteListing(id) {
+  if (!confirm('Delete this listing? Cannot be undone.')) return;
+  try {
+    await req(`/products/${id}`, { method:'DELETE' });
+    toast('Listing deleted', 'info'); loadListings(); loadDash();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+# Environment variables
+.env
+.env.example
+
+# API keys
+config.js
+secrets.json
+
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Node
+node_modules/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
