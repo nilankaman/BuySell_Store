@@ -5,7 +5,7 @@ Two separate folders — backend and frontend. Start backend first, then open fr
 
 --- 
 
-## Folder Structure
+## Folder Structure 
 
 ```
 BuySell Store/
