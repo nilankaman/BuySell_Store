@@ -3,7 +3,7 @@
 
 Two separate folders — backend and frontend. Start backend first, then open frontend.
 
----
+--- 
 
 ## Folder Structure
 
