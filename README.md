@@ -29,7 +29,7 @@ Edit `backend/src/main/resources/application.properties`:
 spring.datasource.password=YOUR_ACTUAL_PASSWORD
 ```
 
-### 3. Start backend
+### 3. Start  backend
 ```bash
 cd backend
 mvn spring-boot:run
